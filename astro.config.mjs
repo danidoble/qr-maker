@@ -7,6 +7,8 @@ import tailwindcss from "@tailwindcss/vite";
 
 // https://astro.build/config
 export default defineConfig({
+  site: "https://danidoble.github.io",
+  base: "qr-maker",
   integrations: [react()],
 
   vite: {
