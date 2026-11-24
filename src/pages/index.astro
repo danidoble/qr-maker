@@ -1,8 +1,12 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import { QREditor } from '../components/QREditor';
+import Layout from "../layouts/Layout.astro";
+import { Studio } from "../components/Studio";
 ---
 
 <Layout>
-  <QREditor client:load />
+  <Studio client:only="react">
+    <div slot="fallback" class="boot" aria-label="Loading">
+      <div class="boot-mark"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    </div>
+  </Studio>
 </Layout>

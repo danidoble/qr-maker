@@ -16,4 +16,13 @@ export default defineConfig([
   },
   tseslint.configs.recommended,
   pluginReact.configs.flat.recommended,
+  // React 17+ automatic JSX runtime: no need to import React in every file.
+  pluginReact.configs.flat["jsx-runtime"],
+  {
+    settings: { react: { version: "detect" } },
+    rules: {
+      // TypeScript already checks props.
+      "react/prop-types": "off",
+    },
+  },
 ]);

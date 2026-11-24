@@ -1,21 +1,40 @@
 ---
-import '../styles/global.css';
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "QR Maker — design QR codes people actually want to scan",
+  description = "A guided, free QR code studio: custom shapes, gradients, logos and 15 frames. Verified scannable, exported as PNG, SVG, WebP or JPG. 100% in your browser.",
+} = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
 ---
+
 <!doctype html>
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <meta name="generator" content={Astro.generator} />
-    <title>QR Maker — Advanced QR Code Generator</title>
-    <meta name="description" content="Create beautifully styled QR codes with custom shapes, colors, logos and frames." />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta name="theme-color" content="#0b0b0f" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f4f3ef" media="(prefers-color-scheme: light)" />
     <script is:inline>
-      // Apply theme before first paint to avoid flash
+      // Apply the theme before first paint to avoid a flash.
       (function () {
-        const stored = localStorage.getItem('qr-maker-theme');
-        const preferred = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', stored || preferred);
+        var stored = null;
+        try {
+          stored = localStorage.getItem("qr-maker-theme");
+        } catch (e) {}
+        var preferred = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", stored || preferred);
       })();
     </script>
   </head>
