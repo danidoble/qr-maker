@@ -13,6 +13,7 @@ A guided QR code design studio that runs entirely in your browser. Pick what the
 - **Logos**: upload (drag & drop, auto-downscaled) or use one of 14 built-in vector icons, with a backdrop shape. Error correction switches to H automatically.
 - **15 frames**: Card, Button, Speech, Ticket, Polaroid, Phone, Viewfinder, Seal, Ribbon, Stamp, Tag, Doodle, Aura, Editorial, Browser. Each has 6 typefaces, palettes, and a "Match my QR" option.
 - **Export**: PNG, SVG, WebP or JPG at up to 4K. SVG export works with frames too, and fonts are embedded. You can also copy the image, use the native share sheet, or copy an **edit link** that reopens the exact design.
+- **Bulk mode**: switch step 1 to *Many QRs* to make up to 2,000 codes with one design, no content type needed. Generate random codes (length, A–Z / a–z / 0–9 / custom symbols, prefix/suffix, no look-alike characters) or paste a list split by new lines or commas. Repeated values are flagged and can be removed. Each QR can show its own code on the frame (title or small print), the same text, no text, or no frame at all. Downloads as one ZIP with a `manifest.csv`; rendering and zipping run in the browser.
 - **Undo/redo**, autosave, light/dark theme, reduced-motion support, and keyboard shortcuts (`⌘/Ctrl+Z`, `⌘/Ctrl+Shift+Z`, `⌘/Ctrl+Enter` next step, `⌘/Ctrl+S` download).
 
 ## Stack
@@ -33,6 +34,8 @@ src/
 │   ├── content.ts           # content types: fields, validation, payload
 │   ├── presets.ts           # style presets + "surprise me"
 │   ├── export.ts            # PNG/SVG/WebP/JPG, clipboard, share
+│   ├── bulk.ts              # random codes, list parsing, duplicates, batch render
+│   ├── zip.ts               # dependency-free ZIP writer (store)
 │   ├── scan.ts              # render → jsQR decode round-trip
 │   ├── fonts.ts             # typefaces + @font-face embedding for exports
 │   ├── design.ts            # Design types, defaults, sanitizing

@@ -12,6 +12,8 @@ import type { QRMatrix } from "../../lib/qr/encode";
 import { BYTE_CAPACITY } from "../../lib/qr/encode";
 import { resolveEC } from "../../lib/design";
 import type { DesignApi } from "../../hooks/useDesign";
+import type { BulkApi } from "../../hooks/useBulk";
+import { BulkSource } from "./Bulk";
 import { Field, Segmented, Switch, cx, inputCls } from "../ui/controls";
 import { Icon } from "../ui/Icon";
 import { useToast } from "../ui/Toast";
@@ -24,9 +26,44 @@ interface Props {
   matrix: QRMatrix | null;
   showErrors: boolean;
   onTypeChange: (t: Design["content"]["type"]) => void;
+  bulk: BulkApi;
 }
 
-export function ContentStep({
+export function ContentStep(p: Props) {
+  const { bulk } = p;
+  const on = bulk.settings.enabled;
+  return (
+    <div>
+      <StepHeader
+        step={1}
+        title={on ? "Which codes do you need?" : "What should your QR open?"}
+      >
+        {on
+          ? "Generate random codes or paste your own list. They all get the design you build in the next steps."
+          : "Pick a type and fill in the details. The preview updates as you type."}
+      </StepHeader>
+
+      <Segmented
+        label="How many QR codes"
+        className="mb-5"
+        value={on ? "bulk" : "single"}
+        onChange={(v) => bulk.set({ enabled: v === "bulk" })}
+        options={[
+          { value: "single", label: "One QR", icon: "scan" },
+          { value: "bulk", label: "Many QRs (bulk)", icon: "grid" },
+        ]}
+      />
+
+      {on ? (
+        <BulkSource bulk={bulk} qr={p.design.qr} />
+      ) : (
+        <SingleContent {...p} />
+      )}
+    </div>
+  );
+}
+
+function SingleContent({
   design,
   api,
   resolved,
@@ -41,10 +78,6 @@ export function ContentStep({
 
   return (
     <div>
-      <StepHeader step={1} title="What should your QR open?">
-        Pick a type and fill in the details. The preview updates as you type.
-      </StepHeader>
-
       <div
         role="radiogroup"
         aria-label="Content type"

@@ -23,6 +23,7 @@ interface StageProps {
   scan: ScanStatus;
   onQuickDownload: () => void;
   quickLabel: string;
+  emptyHint?: string;
   className?: string;
 }
 
@@ -33,6 +34,7 @@ export function Stage({
   scan,
   onQuickDownload,
   quickLabel,
+  emptyHint,
   className,
 }: StageProps) {
   const reduce = useReducedMotion();
@@ -175,6 +177,7 @@ export function Stage({
                   </p>
                   <p className="mt-1 text-[12.5px] text-muted text-pretty">
                     {comp.error ??
+                      emptyHint ??
                       `Fill in the ${resolved.def.label.toLowerCase()} details to generate it.`}
                   </p>
                 </div>

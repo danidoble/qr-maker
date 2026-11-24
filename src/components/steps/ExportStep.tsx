@@ -2,11 +2,14 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import type { Composition } from "../../lib/compose";
 import type { ResolvedContent } from "../../lib/content";
+import type { FrameStyle, QRStyle } from "../../lib/design";
 import { FORMATS, canShareFiles, type ExportFormat } from "../../lib/export";
 import type { ScanStatus } from "../../lib/scan";
 import { Button, Field, Segmented, cx, inputCls } from "../ui/controls";
 import { Icon } from "../ui/Icon";
 import { Burst, StepHeader } from "../studio/bits";
+import type { BulkApi } from "../../hooks/useBulk";
+import { BulkOutput } from "./Bulk";
 
 export interface ExportSettings {
   format: ExportFormat;
@@ -18,6 +21,8 @@ interface Props {
   settings: ExportSettings;
   onSettings: (p: Partial<ExportSettings>) => void;
   comp: Composition;
+  qr: QRStyle;
+  frame: FrameStyle;
   resolved: ResolvedContent;
   scan: ScanStatus;
   busy: boolean;
@@ -28,6 +33,8 @@ interface Props {
   onShare: () => void;
   onCopyLink: () => void;
   onNew: () => void;
+  bulk: BulkApi;
+  onBulk: () => void;
 }
 
 const SIZES = [512, 1024, 2048, 4096];
@@ -38,6 +45,30 @@ export function ExportStep(p: Props) {
   const raster = settings.format !== "svg";
   const h = Math.round((comp.height / comp.width) * settings.width);
   const ext = FORMATS.find((f) => f.id === settings.format)!.ext;
+
+  if (p.bulk.settings.enabled)
+    return (
+      <div>
+        <StepHeader step={4} title="Ready to ship">
+          {p.bulk.items.length.toLocaleString()} codes with this design, packed
+          in one ZIP. Everything is generated right here in your browser —
+          nothing is uploaded.
+        </StepHeader>
+        <ScanCard
+          scan={resolved.valid ? scan : "idle"}
+          resolved={resolved}
+          note="Checked on code #1. Every code shares this design."
+        />
+        <div className="mt-5">
+          <BulkOutput
+            bulk={p.bulk}
+            qr={p.qr}
+            frame={p.frame}
+            baseName={settings.filename.trim() || "qr"}
+          />
+        </div>
+      </div>
+    );
 
   return (
     <div>
@@ -187,9 +218,12 @@ export function ExportStep(p: Props) {
           </Button>
         </div>
 
-        <div className="flex items-center justify-center pt-2">
+        <div className="flex flex-wrap items-center justify-center gap-1 pt-2">
           <Button variant="ghost" size="sm" icon="plus" onClick={p.onNew}>
             Start a new QR with this style
+          </Button>
+          <Button variant="ghost" size="sm" icon="grid" onClick={p.onBulk}>
+            Make many with this design
           </Button>
         </div>
       </div>
@@ -200,9 +234,11 @@ export function ExportStep(p: Props) {
 function ScanCard({
   scan,
   resolved,
+  note,
 }: {
   scan: ScanStatus;
   resolved: ResolvedContent;
+  note?: string;
 }) {
   const ok = scan === "ok";
   const bad = scan === "fail" || scan === "mismatch";
@@ -264,7 +300,10 @@ function ScanCard({
               ? "Our decoder couldn't read it reliably. Try more contrast, a simpler pattern, a smaller logo or error correction H."
               : "We decode every design to make sure it works."}
         </p>
-        {resolved.valid && (
+        {note && resolved.valid && (
+          <p className="mt-1 text-[12px] text-subtle">{note}</p>
+        )}
+        {resolved.valid && resolved.summary && (
           <p className="mt-2 flex items-center gap-1.5 text-[12px] text-subtle min-w-0">
             <Icon name={resolved.def.icon} size={13} />
             <span className="truncate font-mono">{resolved.summary}</span>

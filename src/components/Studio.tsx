@@ -29,6 +29,7 @@ import {
   FORMATS,
 } from "../lib/export";
 import { useDesign, shareUrl } from "../hooks/useDesign";
+import { useBulk } from "../hooks/useBulk";
 import { useScanCheck } from "../hooks/useScanCheck";
 import { useTheme } from "../hooks/useTheme";
 import { ContentStep } from "./steps/ContentStep";
@@ -80,21 +81,52 @@ function StudioInner() {
   const { design } = api;
   const toast = useToast();
 
+  // ── Steps ──
+  const [step, setStep] = useState(() => (api.openedFromLink ? 3 : 0));
+
   // ── Derived ──
-  const resolved = useMemo(
+  const bulk = useBulk(toast);
+  const bulkOn = bulk.settings.enabled;
+  const single = useMemo(
     () => resolveContent(design.content.type, design.content.fields),
     [design.content],
   );
+  // In bulk mode the preview (and its scan check) shows code #1 of the batch,
+  // and the single-QR content fields don't gate the flow.
+  const first = bulk.items[0];
+  const resolved = useMemo(
+    () =>
+      bulkOn
+        ? {
+            ...single,
+            valid: bulk.ready,
+            errors: {},
+            data: first?.data ?? "",
+            summary: "",
+          }
+        : single,
+    [bulkOn, single, bulk.ready, first],
+  );
   const data = resolved.valid ? resolved.data : PLACEHOLDER_DATA;
+  const previewFrame = useMemo(() => {
+    if (!bulkOn || !first) return design.frame;
+    // While choosing a frame, show it even if the batch will be exported bare.
+    if (step === 2 && bulk.settings.labelMode === "bare") return design.frame;
+    return bulk.frameFor(design.frame, first);
+  }, [
+    bulkOn,
+    first,
+    step,
+    bulk.settings.labelMode,
+    bulk.frameFor,
+    design.frame,
+  ]);
   const input = useMemo(
-    () => ({ data, qr: design.qr, frame: design.frame }),
-    [data, design.qr, design.frame],
+    () => ({ data, qr: design.qr, frame: previewFrame }),
+    [data, design.qr, previewFrame],
   );
   const comp = useMemo(() => compose(input, { idPrefix: "pv" }), [input]);
   const scan = useScanCheck(input, resolved.valid);
-
-  // ── Steps ──
-  const [step, setStep] = useState(() => (api.openedFromLink ? 3 : 0));
   const [dir, setDir] = useState(1);
   const [showErrors, setShowErrors] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -111,7 +143,12 @@ function StudioInner() {
           x: [0, -8, 8, -5, 5, 0],
           transition: { duration: 0.4 },
         });
-        toast("Fill in the highlighted fields first", "error");
+        toast(
+          bulkOn
+            ? "Add at least one valid code first"
+            : "Fill in the highlighted fields first",
+          "error",
+        );
         return;
       }
       setDir(target > step ? 1 : -1);
@@ -120,7 +157,7 @@ function StudioInner() {
       if (window.innerWidth < 1024)
         window.scrollTo({ top: 0, behavior: "smooth" });
     },
-    [step, resolved.valid, nextCtl, toast],
+    [step, resolved.valid, bulkOn, nextCtl, toast],
   );
 
   const announced = useRef(false);
@@ -161,11 +198,19 @@ function StudioInner() {
     }
   }, [exp]);
 
-  const defaultName = `qr-${slugify(resolved.summary || resolved.def.label)}`;
+  const defaultName = bulkOn
+    ? "qr"
+    : `qr-${slugify(resolved.summary || resolved.def.label)}`;
   const filename = exp.filename.trim() || defaultName;
 
   const download = useCallback(async () => {
     if (!resolved.valid) return go(1);
+    if (bulkOn) {
+      if (bulk.running) return;
+      await bulk.run(design.qr, design.frame, filename);
+      setBurst((b) => b + 1);
+      return;
+    }
     setBusy(true);
     try {
       const r = await renderExport(input, exp.format, exp.width);
@@ -177,7 +222,19 @@ function StudioInner() {
     } finally {
       setBusy(false);
     }
-  }, [input, exp, filename, resolved.valid, go, toast]);
+  }, [
+    input,
+    exp,
+    filename,
+    resolved.valid,
+    go,
+    toast,
+    bulkOn,
+    bulk.running,
+    bulk.run,
+    design.qr,
+    design.frame,
+  ]);
 
   const copy = useCallback(async () => {
     try {
@@ -257,6 +314,7 @@ function StudioInner() {
         matrix={comp.matrix}
         showErrors={showErrors}
         onTypeChange={onTypeChange}
+        bulk={bulk}
       />
     );
   else if (step === 1)
@@ -271,6 +329,8 @@ function StudioInner() {
         settings={exp}
         onSettings={(p) => setExp((s) => ({ ...s, ...p }))}
         comp={comp}
+        qr={design.qr}
+        frame={design.frame}
         resolved={resolved}
         scan={scan}
         busy={busy}
@@ -281,6 +341,12 @@ function StudioInner() {
         onShare={share}
         onCopyLink={copyLink}
         onNew={startNew}
+        bulk={bulk}
+        onBulk={() => {
+          bulk.set({ enabled: true });
+          setDir(-1);
+          setStep(0);
+        }}
       />
     );
 
@@ -366,9 +432,9 @@ function StudioInner() {
                     variant="primary"
                     icon="download"
                     onClick={download}
-                    disabled={busy || !resolved.valid}
+                    disabled={busy || bulk.running || !resolved.valid}
                   >
-                    {fmt.label}
+                    {bulkOn ? "ZIP" : fmt.label}
                   </Button>
                 )}
               </motion.div>
@@ -385,7 +451,14 @@ function StudioInner() {
             resolved={resolved}
             scan={scan}
             onQuickDownload={download}
-            quickLabel={`Download ${fmt.label}`}
+            quickLabel={
+              bulkOn
+                ? `Download ZIP · ${bulk.items.length.toLocaleString()}`
+                : `Download ${fmt.label}`
+            }
+            emptyHint={
+              bulkOn ? "Add codes in step 1 to generate them." : undefined
+            }
           />
         </div>
       </div>
